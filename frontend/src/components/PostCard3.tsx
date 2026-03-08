@@ -1,6 +1,6 @@
 import "../CSS/PostCard.css"
-import kremlin from "../Img/09a8aa1e24083e7_500x300.jpg";
-import d from "../Img/download.jpg";
+import kremlin from "../Img/placeholder-post.svg";
+import d from "../Img/placeholder-avatar.svg";
 
 
 const PostCard3 = () => {

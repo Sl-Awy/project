@@ -1,6 +1,6 @@
 import "../CSS/PostCard.css"
-import rest from "../Img/65ddc6b0330f1797039781.jpg";
-import avatar from "../Img/af62d76a2d92797df0711e6a94d319490936f3a1_2_1000x1000.jpg";
+import rest from "../Img/placeholder-post.svg";
+import avatar from "../Img/placeholder-avatar.svg";
 
 const PostCard1 = () => {
   return (

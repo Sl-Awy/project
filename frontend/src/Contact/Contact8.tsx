@@ -1,4 +1,4 @@
-import avatar8 from "../Img/neural-photo-1.iehmu4..jpg";
+import avatar8 from "../Img/placeholder-avatar.svg";
 
 const Contact8 = () => {
     return (

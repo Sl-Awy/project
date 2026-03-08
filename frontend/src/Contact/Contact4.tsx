@@ -1,4 +1,4 @@
-import avatar4 from "../Img/download.jpg";
+import avatar4 from "../Img/placeholder-avatar.svg";
 
 const Contact4 = () => {
     return (

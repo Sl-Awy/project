@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <rect width="400" height="300" fill="#2d3748"/>
+  <circle cx="120" cy="100" r="30" fill="#4a5568"/>
+  <polygon points="0,300 150,150 250,220 400,120 400,300" fill="#4a5568"/>
+  <text x="200" y="280" text-anchor="middle" fill="#718096" font-family="sans-serif" font-size="16">Placeholder</text>
+</svg>

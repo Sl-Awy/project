@@ -1,4 +1,4 @@
-import avatar3 from "../Img/L6NX3iFBmN.jpg";
+import avatar3 from "../Img/placeholder-avatar.svg";
 
 
 const Dialog3 = () => {

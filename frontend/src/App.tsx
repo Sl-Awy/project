@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { Route, Routes, useNavigate } from "react-router-dom";
+import { Route, Routes, useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "./context/AuthContext";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import MessengerPage from "./pages/MessengerPage";
@@ -8,26 +9,37 @@ import SearchPage from "./pages/SearchPage";
 import SettingsPage from "./pages/SettingsPage";
 import SignupPage from "./pages/SignupPage";
 
+const PUBLIC_ROUTES = ["/login", "/signup"];
+
 function App() {
   const navigate = useNavigate();
-  const login = sessionStorage.getItem("login");
+  const location = useLocation();
+  const { isAuthenticated, isLoading } = useAuth();
+
   useEffect(() => {
-    if (!login) {
+    if (!isLoading && !isAuthenticated && !PUBLIC_ROUTES.includes(location.pathname)) {
       navigate("/login");
-    } 
-  },[login, navigate]);
+    }
+  }, [isAuthenticated, isLoading, navigate, location.pathname]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <span className="text-gray-400 text-lg">Loading...</span>
+      </div>
+    );
+  }
+
   return (
-    <>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/search" element={<SearchPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/messenger" element={<MessengerPage />} />
-      </Routes>
-    </>
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignupPage />} />
+      <Route path="/settings" element={<SettingsPage />} />
+      <Route path="/search" element={<SearchPage />} />
+      <Route path="/profile" element={<ProfilePage />} />
+      <Route path="/messenger" element={<MessengerPage />} />
+    </Routes>
   );
 }
 

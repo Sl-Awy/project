@@ -1,4 +1,4 @@
-import avatar2 from "../Img/turisty-v-londone-2.webp";
+import avatar2 from "../Img/placeholder-avatar.svg";
 
 const Contact2 = () => {
     return (

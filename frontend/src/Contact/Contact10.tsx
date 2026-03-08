@@ -1,4 +1,4 @@
-import avatar10 from "../Img/1676295972191096669.png";
+import avatar10 from "../Img/placeholder-avatar.svg";
 
 const Contact10 = () => {
     return (

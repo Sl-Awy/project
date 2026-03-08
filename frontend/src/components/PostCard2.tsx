@@ -1,6 +1,6 @@
 import "../CSS/PostCard.css"
-import paris from "../Img/about-Paris-2.jpg";
-import rik from "../Img/3a436b9233843a9e4c4a170d3exm--dizajn-i-reklama-prevyu-avatarki-shapka-profilya.jpg";
+import paris from "../Img/placeholder-post.svg";
+import rik from "../Img/placeholder-avatar.svg";
 
 
 const PostCard2 = () => {

@@ -1,4 +1,4 @@
-import avatar6 from "../Img/3a436b9233843a9e4c4a170d3exm--dizajn-i-reklama-prevyu-avatarki-shapka-profilya.jpg";
+import avatar6 from "../Img/placeholder-avatar.svg";
 
 const Contact6 = () => {
     return (
