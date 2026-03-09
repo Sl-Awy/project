@@ -1,8 +1,10 @@
 .form {
     border: 2px solid #0ef; 
     border-radius: 20px;
-    width: 570px;
+    width: 100%;
+    max-width: 570px;
     padding: 10px;
+    box-sizing: border-box;
 }
 
 .forms {
@@ -16,7 +18,8 @@
 }
 
 .wrapper {
-    width: 750px;
+    width: 100%;
+    max-width: 750px;
     height: 450px;
     background: transparent;
     border: 2px solid #0ef;  
@@ -134,11 +137,9 @@
     background: #00FF85;
 }
 
-@media (min-width: 781px) { }
-
-@media (max-width: 481px) {
+@media (max-width: 600px) {
     .form {
-        width: 90%;
+        padding: 8px;
     }
 
     .wrapper {
@@ -146,37 +147,22 @@
         height: auto;
     }
 
-    .dots{
-        margin-top: -50px;
-        margin-left: 380px;
-    }
-
     .forms1 {
-        width: 90%;
-        border: 2px solid #0ef;
+        width: 100%;
     }
 
-    .text {
-        margin-top: 30px;
-        color: #fff;
+    .forms {
+        height: 64px;
+        padding-left: 16px;
+        padding-right: 16px;
     }
-    
+
     .button {
-        margin-right: 40px; 
-    }
-
-    .mobile{
-        margin-left: 20px;
-        
-    }
-
-    .options {
-        flex-direction: column;
-        align-items: flex-start;
+        margin-left: 10px;
+        margin-right: 10px;
     }
 
     .button1 {
         background: none;
-        margin-right: 50px;
     }
 }

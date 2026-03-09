@@ -16,6 +16,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once __DIR__ . '/auth.php';
 
+define('ARTICLES_PER_PAGE', 5);
+
 $uri    = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -36,7 +38,14 @@ $key = "$method $uri";
 $matched = null;
 $routeParams = [];
 
-if ($method === 'GET' && preg_match('#^/api/articles/(\d+)$#', $uri, $m)) {
+if (preg_match('#^/api/articles/(\d+)/comments$#', $uri, $m)) {
+    $routeParams['id'] = (int) $m[1];
+    $matched = $method === 'GET'  ? 'handleGetComments'
+             : ($method === 'POST' ? 'handleCreateComment' : null);
+} elseif ($method === 'POST' && preg_match('#^/api/articles/(\d+)/like$#', $uri, $m)) {
+    $matched = 'handleToggleLike';
+    $routeParams['id'] = (int) $m[1];
+} elseif ($method === 'GET' && preg_match('#^/api/articles/(\d+)$#', $uri, $m)) {
     $matched = 'handleGetArticle';
     $routeParams['id'] = (int) $m[1];
 } else {
@@ -96,17 +105,46 @@ function handleGetArticles(array $params = []): void
         return;
     }
 
-    $pdo  = getDB();
-    $stmt = $pdo->query('
+    $page = max(1, (int) ($_GET['page'] ?? 1));
+    $offset = ($page - 1) * ARTICLES_PER_PAGE;
+
+    $pdo = getDB();
+
+    $total = (int) $pdo->query('SELECT COUNT(*) FROM articles')->fetchColumn();
+    $totalPages = max(1, (int) ceil($total / ARTICLES_PER_PAGE));
+
+    $stmt = $pdo->prepare('
         SELECT a.id, a.title, a.body, a.image_url, a.created_at,
-               u.id AS user_id, u.name, u.email, u.avatar_url
+               u.id AS user_id, u.name, u.email, u.avatar_url,
+               (SELECT COUNT(*) FROM likes l WHERE l.article_id = a.id) AS like_count,
+               (SELECT COUNT(*) FROM comments c WHERE c.article_id = a.id) AS comment_count,
+               EXISTS(SELECT 1 FROM likes l WHERE l.article_id = a.id AND l.user_id = :uid) AS user_has_liked
         FROM articles a
         JOIN users u ON u.id = a.user_id
         ORDER BY a.created_at DESC
+        LIMIT :limit OFFSET :offset
     ');
+    $stmt->bindValue(':uid',    (int) $user['id'], PDO::PARAM_INT);
+    $stmt->bindValue(':limit',  ARTICLES_PER_PAGE, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset,           PDO::PARAM_INT);
+    $stmt->execute();
     $articles = $stmt->fetchAll();
 
-    echo json_encode(['success' => true, 'data' => $articles]);
+    foreach ($articles as &$a) {
+        $a['like_count']     = (int) $a['like_count'];
+        $a['comment_count']  = (int) $a['comment_count'];
+        $a['user_has_liked'] = (bool) $a['user_has_liked'];
+    }
+
+    echo json_encode([
+        'success' => true,
+        'data'    => [
+            'articles'    => $articles,
+            'page'        => $page,
+            'total_pages' => $totalPages,
+            'total'       => $total,
+        ],
+    ]);
 }
 
 function handleGetArticle(array $params = []): void
@@ -128,12 +166,15 @@ function handleGetArticle(array $params = []): void
     $pdo  = getDB();
     $stmt = $pdo->prepare('
         SELECT a.id, a.title, a.body, a.image_url, a.created_at,
-               u.id AS user_id, u.name, u.email, u.avatar_url
+               u.id AS user_id, u.name, u.email, u.avatar_url,
+               (SELECT COUNT(*) FROM likes l WHERE l.article_id = a.id) AS like_count,
+               (SELECT COUNT(*) FROM comments c WHERE c.article_id = a.id) AS comment_count,
+               EXISTS(SELECT 1 FROM likes l WHERE l.article_id = a.id AND l.user_id = :uid) AS user_has_liked
         FROM articles a
         JOIN users u ON u.id = a.user_id
         WHERE a.id = :id
     ');
-    $stmt->execute([':id' => $id]);
+    $stmt->execute([':id' => $id, ':uid' => (int) $user['id']]);
     $article = $stmt->fetch();
 
     if (!$article) {
@@ -141,6 +182,10 @@ function handleGetArticle(array $params = []): void
         echo json_encode(['success' => false, 'data' => null, 'error' => 'Article not found.']);
         return;
     }
+
+    $article['like_count']     = (int) $article['like_count'];
+    $article['comment_count']  = (int) $article['comment_count'];
+    $article['user_has_liked'] = (bool) $article['user_has_liked'];
 
     echo json_encode(['success' => true, 'data' => $article]);
 }
@@ -203,6 +248,157 @@ function handleCreateArticle(array $params = []): void
             'body'       => $safeBody,
             'image_url'  => $imageUrl,
             'created_at' => date('Y-m-d H:i:s'),
+        ],
+    ]);
+}
+
+// ──────────────────────────────────────────
+// Comment handlers
+// ──────────────────────────────────────────
+
+function handleGetComments(array $params = []): void
+{
+    $user = getCurrentUser();
+    if (!$user) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'data' => null, 'error' => 'Not authenticated.']);
+        return;
+    }
+
+    $articleId = $params['id'] ?? 0;
+    if ($articleId <= 0) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'data' => null, 'error' => 'Invalid article ID.']);
+        return;
+    }
+
+    $pdo  = getDB();
+    $stmt = $pdo->prepare('
+        SELECT c.id, c.body, c.created_at,
+               u.id AS user_id, u.name, u.email, u.avatar_url
+        FROM comments c
+        JOIN users u ON u.id = c.user_id
+        WHERE c.article_id = :aid
+        ORDER BY c.created_at ASC
+    ');
+    $stmt->execute([':aid' => $articleId]);
+    $comments = $stmt->fetchAll();
+
+    echo json_encode(['success' => true, 'data' => $comments]);
+}
+
+function handleCreateComment(array $params = []): void
+{
+    $user = getCurrentUser();
+    if (!$user) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'data' => null, 'error' => 'Not authenticated.']);
+        return;
+    }
+
+    $articleId = $params['id'] ?? 0;
+    if ($articleId <= 0) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'data' => null, 'error' => 'Invalid article ID.']);
+        return;
+    }
+
+    $pdo = getDB();
+
+    $exists = $pdo->prepare('SELECT id FROM articles WHERE id = :id');
+    $exists->execute([':id' => $articleId]);
+    if (!$exists->fetch()) {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'data' => null, 'error' => 'Article not found.']);
+        return;
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    $body  = trim($input['body'] ?? '');
+
+    if ($body === '') {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'data' => null, 'error' => 'Comment body is required.']);
+        return;
+    }
+
+    $safeBody = sanitize($body);
+
+    $stmt = $pdo->prepare('
+        INSERT INTO comments (article_id, user_id, body)
+        VALUES (:aid, :uid, :body)
+    ');
+    $stmt->execute([
+        ':aid'  => $articleId,
+        ':uid'  => $user['id'],
+        ':body' => $safeBody,
+    ]);
+
+    echo json_encode([
+        'success' => true,
+        'data'    => [
+            'id'         => (int) $pdo->lastInsertId(),
+            'body'       => $safeBody,
+            'created_at' => date('Y-m-d H:i:s'),
+            'user_id'    => (int) $user['id'],
+            'name'       => $user['name'] ?? null,
+            'email'      => $user['email'],
+            'avatar_url' => null,
+        ],
+    ]);
+}
+
+// ──────────────────────────────────────────
+// Like handler
+// ──────────────────────────────────────────
+
+function handleToggleLike(array $params = []): void
+{
+    $user = getCurrentUser();
+    if (!$user) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'data' => null, 'error' => 'Not authenticated.']);
+        return;
+    }
+
+    $articleId = $params['id'] ?? 0;
+    if ($articleId <= 0) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'data' => null, 'error' => 'Invalid article ID.']);
+        return;
+    }
+
+    $pdo = getDB();
+
+    $exists = $pdo->prepare('SELECT id FROM articles WHERE id = :id');
+    $exists->execute([':id' => $articleId]);
+    if (!$exists->fetch()) {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'data' => null, 'error' => 'Article not found.']);
+        return;
+    }
+
+    $check = $pdo->prepare('SELECT 1 FROM likes WHERE user_id = :uid AND article_id = :aid');
+    $check->execute([':uid' => $user['id'], ':aid' => $articleId]);
+    $alreadyLiked = (bool) $check->fetch();
+
+    if ($alreadyLiked) {
+        $pdo->prepare('DELETE FROM likes WHERE user_id = :uid AND article_id = :aid')
+            ->execute([':uid' => $user['id'], ':aid' => $articleId]);
+    } else {
+        $pdo->prepare('INSERT INTO likes (user_id, article_id) VALUES (:uid, :aid)')
+            ->execute([':uid' => $user['id'], ':aid' => $articleId]);
+    }
+
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM likes WHERE article_id = :aid');
+    $stmt->execute([':aid' => $articleId]);
+    $count = (int) $stmt->fetchColumn();
+
+    echo json_encode([
+        'success' => true,
+        'data'    => [
+            'liked'      => !$alreadyLiked,
+            'like_count' => $count,
         ],
     ]);
 }

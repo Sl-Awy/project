@@ -18,6 +18,7 @@ $users = [
     ['Franklin Strong',  'franklin.strong@example.com',  '-40 days'],
     ['Sophia Martinez',  'sophia.martinez@example.com',  '-35 days'],
     ['James Wilson',     'james.wilson@example.com',     '-30 days'],
+    ['Admin',            'admin@example.com',            '-60 days'],
 ];
 
 $insertUser = $pdo->prepare(
@@ -35,6 +36,10 @@ foreach ($users as $u) {
     $userIds[$u[0]] = $pdo->lastInsertId();
     echo "  Created user: {$u[0]} ({$u[1]})\n";
 }
+
+$pdo->prepare("UPDATE users SET role = 'admin' WHERE id = :id")
+    ->execute([':id' => $userIds['Admin']]);
+echo "  Promoted Admin to admin role.\n";
 
 $articles = [
     [

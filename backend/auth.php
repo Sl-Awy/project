@@ -62,7 +62,7 @@ function getCurrentUser(): ?array
 
     $pdo  = getDB();
     $stmt = $pdo->prepare('
-        SELECT u.id, u.email, u.name
+        SELECT u.id, u.email, u.name, u.role
         FROM tokens t
         JOIN users u ON u.id = t.user_id
         WHERE t.token = :token
@@ -229,7 +229,7 @@ function handleLogin(array $params = []): void
         return;
     }
 
-    $stmt = $pdo->prepare('SELECT id, email, name, password FROM users WHERE email = :e');
+    $stmt = $pdo->prepare('SELECT id, email, name, password, role FROM users WHERE email = :e');
     $stmt->execute([':e' => sanitize($email)]);
     $user = $stmt->fetch();
 
@@ -263,6 +263,7 @@ function handleLogin(array $params = []): void
                 'id'    => (int) $user['id'],
                 'email' => $user['email'],
                 'name'  => $user['name'] ?? null,
+                'role'  => $user['role'] ?? 'user',
             ],
         ],
     ]);
@@ -301,6 +302,7 @@ function handleMe(array $params = []): void
                 'id'    => (int) $user['id'],
                 'email' => $user['email'],
                 'name'  => $user['name'] ?? null,
+                'role'  => $user['role'] ?? 'user',
             ],
         ],
     ]);

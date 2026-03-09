@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import { apiRequest } from "../api/client";
 import "../CSS/PostCard.css";
 
 interface PostCardProps {
@@ -9,6 +11,9 @@ interface PostCardProps {
   body: string;
   imageUrl?: string | null;
   createdAt: string;
+  likeCount: number;
+  commentCount: number;
+  liked: boolean;
 }
 
 const AVATAR_COLORS = [
@@ -47,10 +52,35 @@ function formatRelativeTime(dateStr: string): string {
 
 const PREVIEW_LENGTH = 200;
 
-const PostCard = ({ id, title, authorName, avatarUrl, body, imageUrl, createdAt }: PostCardProps) => {
+const PostCard = ({
+  id, title, authorName, avatarUrl, body, imageUrl, createdAt,
+  likeCount: initialLikeCount, commentCount, liked: initialLiked,
+}: PostCardProps) => {
   const initial = authorName.charAt(0).toUpperCase();
   const bgColor = getAvatarColor(authorName);
   const preview = body.length > PREVIEW_LENGTH ? body.slice(0, PREVIEW_LENGTH) + "..." : body;
+
+  const [liked, setLiked] = useState(initialLiked);
+  const [likeCount, setLikeCount] = useState(initialLikeCount);
+  const [likeLoading, setLikeLoading] = useState(false);
+
+  const handleLike = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (likeLoading) return;
+    setLikeLoading(true);
+
+    const res = await apiRequest<{ liked: boolean; like_count: number }>(
+      `/api/articles/${id}/like`,
+      { method: "POST" }
+    );
+
+    if (res.success && res.data) {
+      setLiked(res.data.liked);
+      setLikeCount(res.data.like_count);
+    }
+    setLikeLoading(false);
+  };
 
   return (
     <div className="form">
@@ -89,14 +119,25 @@ const PostCard = ({ id, title, authorName, avatarUrl, body, imageUrl, createdAt 
 
       <div className="flex justify-between mt-2">
         <div className="flex gap-4 items-center h-10">
-          <div className="flex gap-2 items-center cursor-pointer">
-            <img className="heart" src="/suit-heart-fill.svg" alt="like" />
-            <span className="text-gray-50">0</span>
-          </div>
-          <div className="flex gap-2 items-center cursor-pointer">
+          <button
+            onClick={handleLike}
+            disabled={likeLoading}
+            className="flex gap-2 items-center cursor-pointer bg-transparent border-none p-0"
+          >
+            <img
+              className="heart"
+              src="/suit-heart-fill.svg"
+              alt="like"
+              style={liked ? { filter: "none" } : undefined}
+            />
+            <span className={liked ? "text-red-500 font-semibold" : "text-gray-50"}>
+              {likeCount}
+            </span>
+          </button>
+          <Link to={`/article/${id}`} className="flex gap-2 items-center cursor-pointer no-underline">
             <img className="chat" src="/chat-fill.svg" alt="comment" />
-            <span className="text-gray-50">0</span>
-          </div>
+            <span className="text-gray-50">{commentCount}</span>
+          </Link>
         </div>
         <div className="flex gap-2 items-center cursor-pointer">
           <img className="share" src="/share-fill.svg" alt="share" />

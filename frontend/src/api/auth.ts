@@ -2,7 +2,7 @@ import { apiRequest } from "./client";
 
 interface LoginResponse {
   token: string;
-  user: { id: number; email: string };
+  user: { id: number; email: string; role?: string };
 }
 
 interface SignupResponse {
@@ -10,7 +10,7 @@ interface SignupResponse {
 }
 
 interface MeResponse {
-  user: { id: number; email: string };
+  user: { id: number; email: string; role?: string };
 }
 
 export function login(email: string, password: string) {

@@ -15,30 +15,63 @@ interface Article {
   name: string | null;
   email: string;
   avatar_url: string | null;
+  like_count: number;
+  comment_count: number;
+  user_has_liked: boolean;
+}
+
+interface PaginatedResponse {
+  articles: Article[];
+  page: number;
+  total_pages: number;
+  total: number;
 }
 
 const HomePage = () => {
   const [articles, setArticles] = useState<Article[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
 
-  const fetchArticles = async () => {
-    const res = await apiRequest<Article[]>("/api/articles");
+  const fetchArticles = async (p: number) => {
+    setLoading(true);
+    const res = await apiRequest<PaginatedResponse>(`/api/articles?page=${p}`);
     if (res.success && res.data) {
-      setArticles(res.data);
+      setArticles(res.data.articles);
+      setPage(res.data.page);
+      setTotalPages(res.data.total_pages);
     }
     setLoading(false);
   };
 
   useEffect(() => {
-    fetchArticles();
+    fetchArticles(page);
   }, []);
 
+  const goToPage = (p: number) => {
+    if (p < 1 || p > totalPages) return;
+    fetchArticles(p);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const handleArticleCreated = (article: Article) => {
-    setArticles((prev) => [article, ...prev]);
+    if (page === 1) {
+      fetchArticles(1);
+    } else {
+      goToPage(1);
+    }
+  };
+
+  const pageNumbers = () => {
+    const pages: number[] = [];
+    for (let i = 1; i <= totalPages; i++) {
+      pages.push(i);
+    }
+    return pages;
   };
 
   return (
-    <div className="gap-4 flex flex-col justify-center items-center">
+    <div className="gap-4 flex flex-col justify-center items-center px-4 pb-28">
       <SearchInput />
 
       <CreateArticleForm onCreated={handleArticleCreated} />
@@ -48,18 +81,57 @@ const HomePage = () => {
       ) : articles.length === 0 ? (
         <span className="text-gray-400 text-lg py-10">No posts yet.</span>
       ) : (
-        articles.map((article) => (
-          <PostCard
-            key={article.id}
-            id={article.id}
-            title={article.title}
-            authorName={article.name || article.email}
-            avatarUrl={article.avatar_url}
-            body={article.body}
-            imageUrl={article.image_url}
-            createdAt={article.created_at}
-          />
-        ))
+        <>
+          {articles.map((article) => (
+            <PostCard
+              key={article.id}
+              id={article.id}
+              title={article.title}
+              authorName={article.name || article.email}
+              avatarUrl={article.avatar_url}
+              body={article.body}
+              imageUrl={article.image_url}
+              createdAt={article.created_at}
+              likeCount={article.like_count}
+              commentCount={article.comment_count}
+              liked={article.user_has_liked}
+            />
+          ))}
+
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2 py-4">
+              <button
+                onClick={() => goToPage(page - 1)}
+                disabled={page <= 1}
+                className="px-3 py-1.5 rounded-lg border border-gray-600 text-gray-400 hover:text-white hover:border-cyan-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                Previous
+              </button>
+
+              {pageNumbers().map((p) => (
+                <button
+                  key={p}
+                  onClick={() => goToPage(p)}
+                  className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+                    p === page
+                      ? "bg-cyan-500 text-black"
+                      : "border border-gray-600 text-gray-400 hover:text-white hover:border-cyan-400"
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+
+              <button
+                onClick={() => goToPage(page + 1)}
+                disabled={page >= totalPages}
+                className="px-3 py-1.5 rounded-lg border border-gray-600 text-gray-400 hover:text-white hover:border-cyan-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       <Menu />

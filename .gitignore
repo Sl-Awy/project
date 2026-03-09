@@ -24,6 +24,10 @@ Thumbs.db
 *.sqlite-wal
 *.sqlite-shm
 
+# Uploaded files
+backend/uploads/*
+!backend/uploads/.gitkeep
+
 # Logs
 *.log
 npm-debug.log*

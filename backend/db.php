@@ -75,10 +75,34 @@ function migrate(PDO $pdo): void
             ip_address  TEXT    NOT NULL,
             attempted_at TEXT   NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
+
+        CREATE TABLE IF NOT EXISTS comments (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            article_id INTEGER NOT NULL,
+            user_id    INTEGER NOT NULL,
+            body       TEXT    NOT NULL,
+            created_at TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id)    REFERENCES users(id)    ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS likes (
+            user_id    INTEGER NOT NULL,
+            article_id INTEGER NOT NULL,
+            created_at TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (user_id, article_id),
+            FOREIGN KEY (user_id)    REFERENCES users(id)    ON DELETE CASCADE,
+            FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
+        );
     ');
 
     try {
         $pdo->exec('ALTER TABLE users ADD COLUMN name TEXT DEFAULT NULL');
+    } catch (PDOException $e) {
+    }
+
+    try {
+        $pdo->exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'");
     } catch (PDOException $e) {
     }
 }
