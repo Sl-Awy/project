@@ -15,7 +15,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once __DIR__ . '/auth.php';
-require_once __DIR__ . '/articles_db.php';
 
 $uri    = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $method = $_SERVER['REQUEST_METHOD'];
@@ -27,8 +26,6 @@ $routes = [
     'GET  /api/auth/me'      => 'handleMe',
 
     'GET  /api/users'        => 'handleGetUsers',
-    'GET  /api/posts'        => 'handleGetPosts',
-    'POST /api/posts'        => 'handleCreatePost',
 
     'GET  /api/articles'     => 'handleGetArticles',
     'POST /api/articles'     => 'handleCreateArticle',
@@ -37,19 +34,26 @@ $routes = [
 $key = "$method $uri";
 
 $matched = null;
-foreach ($routes as $pattern => $handler) {
-    $parts      = preg_split('/\s+/', $pattern, 2);
-    $routeMethod = $parts[0];
-    $routePath   = $parts[1];
+$routeParams = [];
 
-    if ($routeMethod === $method && $routePath === $uri) {
-        $matched = $handler;
-        break;
+if ($method === 'GET' && preg_match('#^/api/articles/(\d+)$#', $uri, $m)) {
+    $matched = 'handleGetArticle';
+    $routeParams['id'] = (int) $m[1];
+} else {
+    foreach ($routes as $pattern => $handler) {
+        $parts       = preg_split('/\s+/', $pattern, 2);
+        $routeMethod = $parts[0];
+        $routePath   = $parts[1];
+
+        if ($routeMethod === $method && $routePath === $uri) {
+            $matched = $handler;
+            break;
+        }
     }
 }
 
 if ($matched && function_exists($matched)) {
-    $matched();
+    $matched($routeParams);
 } else {
     http_response_code(404);
     echo json_encode([
@@ -63,7 +67,7 @@ if ($matched && function_exists($matched)) {
 // Additional resource handlers
 // ──────────────────────────────────────────
 
-function handleGetUsers(): void
+function handleGetUsers(array $params = []): void
 {
     $user = getCurrentUser();
     if (!$user) {
@@ -73,105 +77,75 @@ function handleGetUsers(): void
     }
 
     $pdo   = getDB();
-    $stmt  = $pdo->query('SELECT id, email, avatar_url, bio, created_at FROM users ORDER BY created_at DESC');
+    $stmt  = $pdo->query('SELECT id, name, email, avatar_url, bio, created_at FROM users ORDER BY created_at DESC');
     $users = $stmt->fetchAll();
 
     echo json_encode(['success' => true, 'data' => $users]);
-}
-
-function handleGetPosts(): void
-{
-    $user = getCurrentUser();
-    if (!$user) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'data' => null, 'error' => 'Not authenticated.']);
-        return;
-    }
-
-    $pdo  = getDB();
-    $stmt = $pdo->query('
-        SELECT p.id, p.content, p.image_url, p.created_at,
-               u.id AS user_id, u.email, u.avatar_url
-        FROM posts p
-        JOIN users u ON u.id = p.user_id
-        ORDER BY p.created_at DESC
-    ');
-    $posts = $stmt->fetchAll();
-
-    echo json_encode(['success' => true, 'data' => $posts]);
-}
-
-function handleCreatePost(): void
-{
-    $user = getCurrentUser();
-    if (!$user) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'data' => null, 'error' => 'Not authenticated.']);
-        return;
-    }
-
-    $input   = json_decode(file_get_contents('php://input'), true);
-    $content = trim($input['content'] ?? '');
-
-    if ($content === '') {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'data' => null, 'error' => 'Post content is required.']);
-        return;
-    }
-
-    $imageUrl = $input['image_url'] ?? null;
-    if ($imageUrl !== null) {
-        $imageUrl = filter_var($imageUrl, FILTER_VALIDATE_URL);
-        if ($imageUrl === false || !preg_match('/^https?:\/\//', $imageUrl)) {
-            http_response_code(400);
-            echo json_encode(['success' => false, 'data' => null, 'error' => 'Invalid image URL.']);
-            return;
-        }
-    }
-
-    $safeContent = sanitize($content);
-
-    $pdo  = getDB();
-    $stmt = $pdo->prepare('INSERT INTO posts (user_id, content, image_url) VALUES (:uid, :c, :img)');
-    $stmt->execute([
-        ':uid' => $user['id'],
-        ':c'   => $safeContent,
-        ':img' => $imageUrl,
-    ]);
-
-    $postId = $pdo->lastInsertId();
-
-    echo json_encode([
-        'success' => true,
-        'data'    => [
-            'id'         => (int) $postId,
-            'user_id'    => (int) $user['id'],
-            'email'      => $user['email'],
-            'content'    => $safeContent,
-            'image_url'  => $imageUrl,
-            'created_at' => date('Y-m-d H:i:s'),
-        ],
-    ]);
 }
 
 // ──────────────────────────────────────────
 // Article handlers
 // ──────────────────────────────────────────
 
-function handleGetArticles(): void
+function handleGetArticles(array $params = []): void
 {
-    $pdo  = getArticlesDB();
+    $user = getCurrentUser();
+    if (!$user) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'data' => null, 'error' => 'Not authenticated.']);
+        return;
+    }
+
+    $pdo  = getDB();
     $stmt = $pdo->query('
-        SELECT id, user_id, author_email AS author, title, created_at
-        FROM articles
-        ORDER BY created_at DESC
+        SELECT a.id, a.title, a.body, a.image_url, a.created_at,
+               u.id AS user_id, u.name, u.email, u.avatar_url
+        FROM articles a
+        JOIN users u ON u.id = a.user_id
+        ORDER BY a.created_at DESC
     ');
     $articles = $stmt->fetchAll();
 
     echo json_encode(['success' => true, 'data' => $articles]);
 }
 
-function handleCreateArticle(): void
+function handleGetArticle(array $params = []): void
+{
+    $user = getCurrentUser();
+    if (!$user) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'data' => null, 'error' => 'Not authenticated.']);
+        return;
+    }
+
+    $id = $params['id'] ?? 0;
+    if ($id <= 0) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'data' => null, 'error' => 'Invalid article ID.']);
+        return;
+    }
+
+    $pdo  = getDB();
+    $stmt = $pdo->prepare('
+        SELECT a.id, a.title, a.body, a.image_url, a.created_at,
+               u.id AS user_id, u.name, u.email, u.avatar_url
+        FROM articles a
+        JOIN users u ON u.id = a.user_id
+        WHERE a.id = :id
+    ');
+    $stmt->execute([':id' => $id]);
+    $article = $stmt->fetch();
+
+    if (!$article) {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'data' => null, 'error' => 'Article not found.']);
+        return;
+    }
+
+    echo json_encode(['success' => true, 'data' => $article]);
+}
+
+function handleCreateArticle(array $params = []): void
 {
     $user = getCurrentUser();
     if (!$user) {
@@ -190,19 +164,29 @@ function handleCreateArticle(): void
         return;
     }
 
+    $imageUrl = $input['image_url'] ?? null;
+    if ($imageUrl !== null) {
+        $imageUrl = filter_var($imageUrl, FILTER_VALIDATE_URL);
+        if ($imageUrl === false || !preg_match('/^https?:\/\//', $imageUrl)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'data' => null, 'error' => 'Invalid image URL.']);
+            return;
+        }
+    }
+
     $safeTitle = sanitize($title);
     $safeBody  = sanitize($body);
 
-    $pdo  = getArticlesDB();
+    $pdo  = getDB();
     $stmt = $pdo->prepare('
-        INSERT INTO articles (user_id, author_email, title, body)
-        VALUES (:uid, :email, :t, :b)
+        INSERT INTO articles (user_id, title, body, image_url)
+        VALUES (:uid, :t, :b, :img)
     ');
     $stmt->execute([
-        ':uid'   => $user['id'],
-        ':email' => $user['email'],
-        ':t'     => $safeTitle,
-        ':b'     => $safeBody,
+        ':uid' => $user['id'],
+        ':t'   => $safeTitle,
+        ':b'   => $safeBody,
+        ':img' => $imageUrl,
     ]);
 
     $articleId = $pdo->lastInsertId();
@@ -212,9 +196,12 @@ function handleCreateArticle(): void
         'data'    => [
             'id'         => (int) $articleId,
             'user_id'    => (int) $user['id'],
-            'author'     => $user['email'],
+            'name'       => $user['name'] ?? null,
+            'email'      => $user['email'],
+            'avatar_url' => $user['avatar_url'] ?? null,
             'title'      => $safeTitle,
             'body'       => $safeBody,
+            'image_url'  => $imageUrl,
             'created_at' => date('Y-m-d H:i:s'),
         ],
     ]);

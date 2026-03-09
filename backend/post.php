@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/articles_db.php';
+require_once __DIR__ . '/db.php';
 
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 
@@ -11,11 +11,13 @@ if (!$id) {
     exit;
 }
 
-$pdo  = getArticlesDB();
+$pdo  = getDB();
 $stmt = $pdo->prepare('
-    SELECT id, user_id, author_email AS author, title, body, created_at
-    FROM articles
-    WHERE id = :id
+    SELECT a.id, a.title, a.body, a.image_url, a.created_at,
+           u.id AS user_id, u.name, u.email, u.avatar_url
+    FROM articles a
+    JOIN users u ON u.id = a.user_id
+    WHERE a.id = :id
 ');
 $stmt->execute([':id' => $id]);
 $article = $stmt->fetch();

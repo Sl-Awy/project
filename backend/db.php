@@ -25,6 +25,7 @@ function migrate(PDO $pdo): void
     $pdo->exec('
         CREATE TABLE IF NOT EXISTS users (
             id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            name       TEXT    DEFAULT NULL,
             email      TEXT    NOT NULL UNIQUE,
             password   TEXT    NOT NULL,
             avatar_url TEXT    DEFAULT NULL,
@@ -40,10 +41,11 @@ function migrate(PDO $pdo): void
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
 
-        CREATE TABLE IF NOT EXISTS posts (
+        CREATE TABLE IF NOT EXISTS articles (
             id         INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id    INTEGER NOT NULL,
-            content    TEXT    NOT NULL,
+            title      TEXT    NOT NULL,
+            body       TEXT    NOT NULL,
             image_url  TEXT    DEFAULT NULL,
             created_at TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -74,4 +76,9 @@ function migrate(PDO $pdo): void
             attempted_at TEXT   NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
     ');
+
+    try {
+        $pdo->exec('ALTER TABLE users ADD COLUMN name TEXT DEFAULT NULL');
+    } catch (PDOException $e) {
+    }
 }

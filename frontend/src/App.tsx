@@ -8,6 +8,7 @@ import ProfilePage from "./pages/ProfilePage";
 import SearchPage from "./pages/SearchPage";
 import SettingsPage from "./pages/SettingsPage";
 import SignupPage from "./pages/SignupPage";
+import ArticlePage from "./pages/ArticlePage";
 
 const PUBLIC_ROUTES = ["/login", "/signup"];
 
@@ -39,6 +40,7 @@ function App() {
       <Route path="/search" element={<SearchPage />} />
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="/messenger" element={<MessengerPage />} />
+      <Route path="/article/:id" element={<ArticlePage />} />
     </Routes>
   );
 }

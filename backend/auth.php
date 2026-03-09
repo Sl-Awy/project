@@ -62,7 +62,7 @@ function getCurrentUser(): ?array
 
     $pdo  = getDB();
     $stmt = $pdo->prepare('
-        SELECT u.id, u.email
+        SELECT u.id, u.email, u.name
         FROM tokens t
         JOIN users u ON u.id = t.user_id
         WHERE t.token = :token
@@ -75,7 +75,7 @@ function getCurrentUser(): ?array
     return $stmt->fetch() ?: null;
 }
 
-function handleSignup(): void
+function handleSignup(array $params = []): void
 {
     $input           = json_decode(file_get_contents('php://input'), true);
     $email           = trim($input['email'] ?? '');
@@ -180,7 +180,7 @@ function handleSignup(): void
     ]);
 }
 
-function handleLogin(): void
+function handleLogin(array $params = []): void
 {
     $input    = json_decode(file_get_contents('php://input'), true);
     $email    = trim($input['email'] ?? '');
@@ -229,7 +229,7 @@ function handleLogin(): void
         return;
     }
 
-    $stmt = $pdo->prepare('SELECT id, email, password FROM users WHERE email = :e');
+    $stmt = $pdo->prepare('SELECT id, email, name, password FROM users WHERE email = :e');
     $stmt->execute([':e' => sanitize($email)]);
     $user = $stmt->fetch();
 
@@ -259,12 +259,16 @@ function handleLogin(): void
         'success' => true,
         'data'    => [
             'token' => $token,
-            'user'  => ['id' => (int) $user['id'], 'email' => $user['email']],
+            'user'  => [
+                'id'    => (int) $user['id'],
+                'email' => $user['email'],
+                'name'  => $user['name'] ?? null,
+            ],
         ],
     ]);
 }
 
-function handleLogout(): void
+function handleLogout(array $params = []): void
 {
     $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
     if (preg_match('/^Bearer\s+(.+)$/i', $header, $m)) {
@@ -276,7 +280,7 @@ function handleLogout(): void
     echo json_encode(['success' => true, 'data' => null]);
 }
 
-function handleMe(): void
+function handleMe(array $params = []): void
 {
     $user = getCurrentUser();
 
@@ -293,7 +297,11 @@ function handleMe(): void
     echo json_encode([
         'success' => true,
         'data'    => [
-            'user' => ['id' => (int) $user['id'], 'email' => $user['email']],
+            'user' => [
+                'id'    => (int) $user['id'],
+                'email' => $user['email'],
+                'name'  => $user['name'] ?? null,
+            ],
         ],
     ]);
 }
