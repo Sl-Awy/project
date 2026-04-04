@@ -4,6 +4,8 @@ import * as authApi from "../api/auth";
 interface User {
   id: number;
   email: string;
+  name?: string | null;
+  avatar_url?: string | null;
   role?: string;
 }
 

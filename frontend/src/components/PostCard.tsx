@@ -1,12 +1,14 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { apiRequest } from "../api/client";
+import { useAuth } from "../context/AuthContext";
 import "../CSS/PostCard.css";
 
 interface PostCardProps {
   id: number;
   title: string;
   authorName: string;
+  authorId: number;
   avatarUrl?: string | null;
   body: string;
   imageUrl?: string | null;
@@ -14,6 +16,7 @@ interface PostCardProps {
   likeCount: number;
   commentCount: number;
   liked: boolean;
+  onDelete?: (id: number) => void;
 }
 
 const AVATAR_COLORS = [
@@ -53,16 +56,36 @@ function formatRelativeTime(dateStr: string): string {
 const PREVIEW_LENGTH = 200;
 
 const PostCard = ({
-  id, title, authorName, avatarUrl, body, imageUrl, createdAt,
-  likeCount: initialLikeCount, commentCount, liked: initialLiked,
+  id, title, authorName, authorId, avatarUrl, body, imageUrl, createdAt,
+  likeCount: initialLikeCount, commentCount, liked: initialLiked, onDelete,
 }: PostCardProps) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const initial = authorName.charAt(0).toUpperCase();
   const bgColor = getAvatarColor(authorName);
   const preview = body.length > PREVIEW_LENGTH ? body.slice(0, PREVIEW_LENGTH) + "..." : body;
 
+  const canDelete = user && (user.id === authorId || user.role === "admin");
+
   const [liked, setLiked] = useState(initialLiked);
   const [likeCount, setLikeCount] = useState(initialLikeCount);
   const [likeLoading, setLikeLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleDelete = async () => {
+    setDeleteLoading(true);
+    const res = await apiRequest(`/api/articles/${id}`, { method: "DELETE" });
+    if (res.success) {
+      if (onDelete) {
+        onDelete(id);
+      } else {
+        navigate("/");
+      }
+    }
+    setDeleteLoading(false);
+    setShowDeleteConfirm(false);
+  };
 
   const handleLike = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -99,12 +122,42 @@ const PostCard = ({
               {initial}
             </div>
           )}
-          <div className="flex flex-col">
-            <span className="font-bold text-xl">{authorName}</span>
-            <span className="text-gray-500">{formatRelativeTime(createdAt)}</span>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs text-cyan-500/90 font-medium tracking-wide">Post by</span>
+            <span className="font-bold text-xl text-gray-50">{authorName}</span>
+            <span className="text-gray-500 text-sm">{formatRelativeTime(createdAt)}</span>
           </div>
         </div>
-        <img className="dots" src="/three-dots-vertical.svg" alt="menu" />
+        {canDelete && (
+          <div className="relative">
+            <button
+              onClick={() => setShowDeleteConfirm(!showDeleteConfirm)}
+              className="bg-transparent border-none cursor-pointer p-1"
+            >
+              <img className="dots" src="/three-dots-vertical.svg" alt="menu" />
+            </button>
+            {showDeleteConfirm && (
+              <div className="absolute right-0 top-8 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-10 p-3 min-w-[180px]">
+                <p className="text-gray-300 text-sm mb-2">Delete this post?</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleteLoading}
+                    className="px-3 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-500 disabled:opacity-50 transition-colors"
+                  >
+                    {deleteLoading ? "Deleting..." : "Delete"}
+                  </button>
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="px-3 py-1 rounded bg-gray-600 text-white text-sm hover:bg-gray-500 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <Link to={`/article/${id}`} className="block mt-2 mb-1">

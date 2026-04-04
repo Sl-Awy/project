@@ -17,8 +17,12 @@ if (!is_dir($uploadsDir)) {
 // ── Handle POST requests ───────────────────────────────────────────────
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    verifyCsrf();
-    $postAction = $_POST['action'] ?? '';
+    if (!verifyCsrf()) {
+        $message     = 'Session expired. Please try again.';
+        $messageType = 'danger';
+    }
+
+    $postAction = ($messageType !== 'danger') ? ($_POST['action'] ?? '') : '';
 
     if ($postAction === 'delete') {
         $id = (int) ($_POST['id'] ?? 0);

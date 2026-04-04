@@ -30,11 +30,12 @@ if (!$adminUser) {
 
 // ── CSRF helpers ───────────────────────────────────────────────────────
 
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 function csrfToken(): string
 {
-    if (empty($_SESSION['csrf_token'])) {
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-    }
     return $_SESSION['csrf_token'];
 }
 
@@ -43,10 +44,16 @@ function csrfField(): string
     return '<input type="hidden" name="csrf_token" value="' . htmlspecialchars(csrfToken()) . '">';
 }
 
-function verifyCsrf(): void
+/**
+ * Returns true when the token is valid, false otherwise.
+ */
+function verifyCsrf(): bool
 {
-    if (!hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'] ?? '')) {
-        http_response_code(403);
-        die('Invalid request. Please reload the page and try again.');
+    $expected = $_SESSION['csrf_token'] ?? '';
+    $provided = $_POST['csrf_token'] ?? '';
+
+    if ($expected === '' || $provided === '' || !hash_equals($expected, $provided)) {
+        return false;
     }
+    return true;
 }

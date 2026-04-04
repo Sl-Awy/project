@@ -1,6 +1,7 @@
 import { useEffect, useState, FormEvent } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { apiRequest } from "../api/client";
+import { useAuth } from "../context/AuthContext";
 import "../CSS/PostCard.css";
 
 interface Article {
@@ -74,6 +75,8 @@ function Avatar({ name, avatarUrl, size = "w-10 h-10" }: { name: string; avatarU
 
 const ArticlePage = () => {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -86,6 +89,9 @@ const ArticlePage = () => {
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [likeLoading, setLikeLoading] = useState(false);
+
+  const [articleDeleteLoading, setArticleDeleteLoading] = useState(false);
+  const [deletingCommentId, setDeletingCommentId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchArticle = async () => {
@@ -148,6 +154,29 @@ const ArticlePage = () => {
     setLikeLoading(false);
   };
 
+  const handleDeleteArticle = async () => {
+    if (!confirm("Delete this post and all its comments?")) return;
+    setArticleDeleteLoading(true);
+    const res = await apiRequest(`/api/articles/${id}`, { method: "DELETE" });
+    if (res.success) {
+      navigate("/");
+    }
+    setArticleDeleteLoading(false);
+  };
+
+  const handleDeleteComment = async (commentId: number) => {
+    if (!confirm("Delete this comment?")) return;
+    setDeletingCommentId(commentId);
+    const res = await apiRequest(`/api/articles/${id}/comments/${commentId}`, { method: "DELETE" });
+    if (res.success) {
+      setComments((prev) => prev.filter((c) => c.id !== commentId));
+    }
+    setDeletingCommentId(null);
+  };
+
+  const isAdmin = user?.role === "admin";
+  const canDeleteArticle = user && article && (user.id === article.user_id || isAdmin);
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -178,12 +207,24 @@ const ArticlePage = () => {
 
         <h1 className="text-2xl font-bold text-white mb-4">{article.title}</h1>
 
-        <div className="flex h-16 gap-4 items-center mb-4">
-          <Avatar name={authorName} avatarUrl={article.avatar_url} />
-          <div className="flex flex-col">
-            <span className="font-bold text-white">{authorName}</span>
-            <span className="text-gray-500 text-sm">{formatDate(article.created_at)}</span>
+        <div className="flex h-16 gap-4 items-center mb-4 justify-between">
+          <div className="flex gap-4 items-center">
+            <Avatar name={authorName} avatarUrl={article.avatar_url} />
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs text-cyan-500/90 font-medium tracking-wide">Post by</span>
+              <span className="font-bold text-white">{authorName}</span>
+              <span className="text-gray-500 text-sm">{formatDate(article.created_at)}</span>
+            </div>
           </div>
+          {canDeleteArticle && (
+            <button
+              onClick={handleDeleteArticle}
+              disabled={articleDeleteLoading}
+              className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm hover:bg-red-500 disabled:opacity-50 transition-colors"
+            >
+              {articleDeleteLoading ? "Deleting..." : "Delete Post"}
+            </button>
+          )}
         </div>
 
         {article.image_url && (
@@ -231,13 +272,25 @@ const ArticlePage = () => {
             <div className="flex flex-col gap-4 mb-6">
               {comments.map((c) => {
                 const cName = c.name || c.email;
+                const canDeleteComment = user && (user.id === c.user_id || isAdmin);
                 return (
                   <div key={c.id} className="flex gap-3">
                     <Avatar name={cName} avatarUrl={c.avatar_url} size="w-8 h-8" />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline gap-2">
-                        <span className="font-semibold text-white text-sm">{cName}</span>
-                        <span className="text-gray-500 text-xs">{formatDate(c.created_at)}</span>
+                      <div className="flex items-baseline gap-2 justify-between">
+                        <div className="flex items-baseline gap-2">
+                          <span className="font-semibold text-white text-sm">{cName}</span>
+                          <span className="text-gray-500 text-xs">{formatDate(c.created_at)}</span>
+                        </div>
+                        {canDeleteComment && (
+                          <button
+                            onClick={() => handleDeleteComment(c.id)}
+                            disabled={deletingCommentId === c.id}
+                            className="text-gray-500 hover:text-red-400 text-xs transition-colors disabled:opacity-50"
+                          >
+                            {deletingCommentId === c.id ? "Deleting..." : "Delete"}
+                          </button>
+                        )}
                       </div>
                       <p className="text-gray-300 text-sm mt-1 whitespace-pre-wrap">{c.body}</p>
                     </div>

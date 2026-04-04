@@ -14,14 +14,10 @@ if (isset($_SESSION['admin_user_id'])) {
     exit;
 }
 
-// ── CSRF helpers (standalone for login page) ───────────────────────────
+// ── CSRF ───────────────────────────────────────────────────────────────
 
-function csrfTokenLogin(): string
-{
-    if (empty($_SESSION['csrf_token'])) {
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-    }
-    return $_SESSION['csrf_token'];
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
 // ── Handle POST ────────────────────────────────────────────────────────
@@ -29,8 +25,11 @@ function csrfTokenLogin(): string
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'] ?? '')) {
-        $error = 'Invalid request. Please reload the page and try again.';
+    $expected = $_SESSION['csrf_token'] ?? '';
+    $provided = $_POST['csrf_token'] ?? '';
+
+    if ($expected === '' || $provided === '' || !hash_equals($expected, $provided)) {
+        $error = 'Session expired. Please reload the page and try again.';
     } else {
         $email    = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
@@ -57,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$csrfToken = csrfTokenLogin();
+$csrfToken = $_SESSION['csrf_token'];
 
 // ── HTML ───────────────────────────────────────────────────────────────
 

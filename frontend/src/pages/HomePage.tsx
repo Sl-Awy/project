@@ -62,6 +62,10 @@ const HomePage = () => {
     }
   };
 
+  const handleArticleDeleted = (id: number) => {
+    setArticles((prev) => prev.filter((a) => a.id !== id));
+  };
+
   const pageNumbers = () => {
     const pages: number[] = [];
     for (let i = 1; i <= totalPages; i++) {
@@ -88,6 +92,7 @@ const HomePage = () => {
               id={article.id}
               title={article.title}
               authorName={article.name || article.email}
+              authorId={article.user_id}
               avatarUrl={article.avatar_url}
               body={article.body}
               imageUrl={article.image_url}
@@ -95,6 +100,7 @@ const HomePage = () => {
               likeCount={article.like_count}
               commentCount={article.comment_count}
               liked={article.user_has_liked}
+              onDelete={handleArticleDeleted}
             />
           ))}
 

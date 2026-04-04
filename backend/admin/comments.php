@@ -11,13 +11,17 @@ $messageType = '';
 // ── Handle delete ──────────────────────────────────────────────────────
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
-    verifyCsrf();
-    $id = (int) ($_POST['id'] ?? 0);
-    if ($id > 0) {
-        $pdo->prepare('DELETE FROM comments WHERE id = :id')
-            ->execute([':id' => $id]);
-        $message     = 'Comment deleted.';
-        $messageType = 'success';
+    if (!verifyCsrf()) {
+        $message     = 'Session expired. Please try again.';
+        $messageType = 'danger';
+    } else {
+        $id = (int) ($_POST['id'] ?? 0);
+        if ($id > 0) {
+            $pdo->prepare('DELETE FROM comments WHERE id = :id')
+                ->execute([':id' => $id]);
+            $message     = 'Comment deleted.';
+            $messageType = 'success';
+        }
     }
 }
 
