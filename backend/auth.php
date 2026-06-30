@@ -75,6 +75,7 @@ function getCurrentUser(): ?array
     return $stmt->fetch() ?: null;
 }
 
+/** User registration: validate input, hash password, insert user row */
 function handleSignup(array $params = []): void
 {
     $input           = json_decode(file_get_contents('php://input'), true);
@@ -180,6 +181,7 @@ function handleSignup(array $params = []): void
     ]);
 }
 
+/** Authentication: verify password, rotate API token for this user */
 function handleLogin(array $params = []): void
 {
     $input    = json_decode(file_get_contents('php://input'), true);
@@ -282,6 +284,7 @@ function handleLogout(array $params = []): void
     echo json_encode(['success' => true, 'data' => null]);
 }
 
+/** Current user from bearer token (session check for the SPA) */
 function handleMe(array $params = []): void
 {
     $user = getCurrentUser();

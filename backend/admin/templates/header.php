@@ -2,7 +2,7 @@
 /**
  * Expects these variables to be set before inclusion:
  *   $pageTitle  — string for <title>
- *   $activePage — 'posts' | 'comments' (highlights nav item)
+ *   $activePage — 'posts' | 'comments' | 'tasks' (highlights nav item)
  *   $adminUser  — array from auth_check.php
  */
 ?>
@@ -34,6 +34,10 @@
                 <li class="nav-item">
                     <a class="nav-link <?= ($activePage ?? '') === 'comments' ? 'active' : '' ?>"
                        href="comments.php">Comments</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?= ($activePage ?? '') === 'tasks' ? 'active' : '' ?>"
+                       href="tasks.php">Tasks</a>
                 </li>
             </ul>
             <ul class="navbar-nav">

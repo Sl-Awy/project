@@ -94,6 +94,20 @@ function migrate(PDO $pdo): void
             FOREIGN KEY (user_id)    REFERENCES users(id)    ON DELETE CASCADE,
             FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
         );
+
+        CREATE TABLE IF NOT EXISTS tasks (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id     INTEGER NOT NULL,
+            title       TEXT    NOT NULL,
+            description TEXT    DEFAULT NULL,
+            urgency     TEXT    NOT NULL DEFAULT \'medium\',
+            complexity  TEXT    NOT NULL DEFAULT \'moderate\',
+            scope       TEXT    NOT NULL DEFAULT \'day\',
+            status      TEXT    NOT NULL DEFAULT \'pending\',
+            due_date    TEXT    DEFAULT NULL,
+            created_at  TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
     ');
 
     try {

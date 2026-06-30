@@ -16,6 +16,7 @@ const SignupForm = () => {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Registration: create a new account (email + password)
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");

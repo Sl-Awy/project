@@ -14,6 +14,7 @@ const LoginForm = () => {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Authentication: submit credentials and store API token
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
@@ -71,7 +72,6 @@ const LoginForm = () => {
           </div>
 
           <button type="button" className="btn1">Connect with Google</button>
-          <button type="button" className="btn2">Connect with Facebook</button>
         </form>
       </div>
       <div className="info-text login">

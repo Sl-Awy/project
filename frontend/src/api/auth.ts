@@ -1,8 +1,16 @@
 import { apiRequest } from "./client";
 
+export interface AuthUser {
+  id: number;
+  email: string;
+  name?: string | null;
+  avatar_url?: string | null;
+  role?: string;
+}
+
 interface LoginResponse {
   token: string;
-  user: { id: number; email: string; role?: string };
+  user: AuthUser;
 }
 
 interface SignupResponse {
@@ -10,9 +18,10 @@ interface SignupResponse {
 }
 
 interface MeResponse {
-  user: { id: number; email: string; role?: string };
+  user: AuthUser;
 }
 
+// Authentication: issue session token after verifying password
 export function login(email: string, password: string) {
   return apiRequest<LoginResponse>("/api/auth/login", {
     method: "POST",
@@ -20,6 +29,7 @@ export function login(email: string, password: string) {
   });
 }
 
+// Registration: create account (user signs up with email + password)
 export function signup(email: string, password: string, confirmPassword: string) {
   return apiRequest<SignupResponse>("/api/auth/signup", {
     method: "POST",
@@ -31,6 +41,7 @@ export function logout() {
   return apiRequest("/api/auth/logout", { method: "POST" });
 }
 
+// Restore session from stored bearer token
 export function checkAuth() {
   return apiRequest<MeResponse>("/api/auth/me");
 }

@@ -6,7 +6,7 @@ const Setting12 = () => {
           <div className="button12 rounded cursor-pointer  w-10 h-10 flex justify-center items-center">
           H
           </div>
-          <span className="text-gray-100">Help</span>
+          <span className="text-gray-100">Contact Support</span>
         </div>
         <span className="arrow text-gray-400 text-3xl">{">"}</span>
       </div>

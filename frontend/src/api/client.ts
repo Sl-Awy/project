@@ -1,5 +1,8 @@
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+// Empty default = same-origin: in production the PHP server serves both the SPA
+// and /api; in dev the Vite proxy forwards /api (and /uploads) to the backend.
+const API_URL = import.meta.env.VITE_API_URL || "";
 
+/** JSON API helper (attaches bearer token when logged in) */
 export interface ApiResponse<T = unknown> {
   success: boolean;
   data: T;

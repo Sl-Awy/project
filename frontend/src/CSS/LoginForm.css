@@ -138,23 +138,6 @@
     overflow: hidden;
 }
 
-.btn2 {
-    top: 25px;
-    position: relative;
-    width: 100%;
-    height: 45px;
-    background: transparent;
-    border: 2px solid #0091FF;
-    outline: none;
-    border-radius: 40px;
-    cursor: pointer;
-    font-size: 16px;
-    color: #fff;
-    font-weight: 600;
-    z-index: 1;
-    overflow: hidden;
-}
-
 .register-link {
     color: rgb(0, 152, 253);
     display: inline-block;
@@ -230,4 +213,52 @@
 
 @media (min-width: 781px) { }
 
+/* Mobile: the fixed 750x450 two-panel layout becomes a single stacked column */
+@media (max-width: 767px) {
+    body .wrapper {
+        width: 92%;
+        max-width: 420px;
+        height: auto;
+        margin: 24px auto;
+    }
+
+    .wrapper .bg-animate {
+        display: none;
+    }
+
+    .wrapper .form-box,
+    .wrapper .info-text {
+        position: static;
+        width: 100%;
+        height: auto;
+    }
+
+    .wrapper .form-box.login {
+        padding: 24px 24px 28px;
+    }
+
+    .wrapper .info-text.login {
+        text-align: center;
+        padding: 8px 24px 24px;
+    }
+
+    .form-box h2,
+    .info-text h2 {
+        font-size: 26px;
+    }
+
+    .btn {
+        width: 100%;
+    }
+
+    .form-box .logreg-link {
+        margin-left: 0;
+        margin-top: 12px;
+    }
+
+    .icon-person {
+        margin-left: auto;
+        margin-right: auto;
+    }
+}
 

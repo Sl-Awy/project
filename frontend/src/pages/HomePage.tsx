@@ -4,21 +4,7 @@ import SearchInput from "../components/SearchInput";
 import PostCard from "../components/PostCard";
 import CreateArticleForm from "../components/CreateArticleForm";
 import Menu from "../components/Menu";
-
-interface Article {
-  id: number;
-  title: string;
-  body: string;
-  image_url: string | null;
-  created_at: string;
-  user_id: number;
-  name: string | null;
-  email: string;
-  avatar_url: string | null;
-  like_count: number;
-  comment_count: number;
-  user_has_liked: boolean;
-}
+import type { Article } from "../types/article";
 
 interface PaginatedResponse {
   articles: Article[];
@@ -33,6 +19,7 @@ const HomePage = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
 
+  // Feed: load paginated posts for the home timeline
   const fetchArticles = async (p: number) => {
     setLoading(true);
     const res = await apiRequest<PaginatedResponse>(`/api/articles?page=${p}`);
@@ -54,7 +41,7 @@ const HomePage = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleArticleCreated = (article: Article) => {
+  const handleArticleCreated = () => {
     if (page === 1) {
       fetchArticles(1);
     } else {

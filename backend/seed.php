@@ -5,8 +5,11 @@ require_once __DIR__ . '/db.php';
 $pdo = getDB();
 
 $check = $pdo->query("SELECT COUNT(*) AS cnt FROM users WHERE email LIKE '%@example.com'");
-if ($check->fetch()['cnt'] > 0) {
-    echo "Seed data already exists. Skipping.\n";
+$usersExist = $check->fetch()['cnt'] > 0;
+
+if ($usersExist) {
+    echo "Demo users already exist. Skipping user/article seed.\n";
+    seedTasks($pdo);
     exit(0);
 }
 
@@ -116,3 +119,100 @@ foreach ($articles as $a) {
 }
 
 echo "\nSeeding complete: " . count($users) . " users, " . count($articles) . " articles.\n";
+
+seedTasks($pdo);
+
+/**
+ * Seed four construction-crew tasks per demo account (idempotent).
+ *
+ * Tasks vary in scope (day / week), urgency (low → critical) and complexity
+ * (simple → complex). Users are resolved by email so this works whether or not
+ * the users/articles seed ran in the same invocation.
+ */
+function seedTasks(PDO $pdo): void
+{
+    // email => list of [title, description, urgency, complexity, scope, status, due "+N days"]
+    $tasksByEmail = [
+        'edward.kelly@example.com' => [
+            ['Upload drone footage of the foundation pour', 'Capture and upload the morning drone pass over the north foundation pour to the project gallery.', 'high', 'moderate', 'day', 'in_progress', '+0 days'],
+            ['Photograph rebar layout before inspection', 'Take wide and close-up photos of the rebar grid so the inspector can review remotely.', 'critical', 'simple', 'day', 'pending', '+0 days'],
+            ['Edit weekly site progress reel', 'Cut the raw clips from this week into a 90-second progress reel for the client portal.', 'medium', 'complex', 'week', 'pending', '+4 days'],
+            ['Archive last month\'s site media', 'Sort, tag and archive the previous month of photos and video into the company library.', 'low', 'moderate', 'week', 'pending', '+6 days'],
+        ],
+        'robert.tich@example.com' => [
+            ['Document crane assembly with photos', 'Record each stage of the tower crane assembly for the safety file.', 'critical', 'moderate', 'day', 'pending', '+0 days'],
+            ['Upload concrete delivery timestamps', 'Log and upload photos of each concrete truck arrival with delivery tickets.', 'medium', 'simple', 'day', 'in_progress', '+0 days'],
+            ['Produce 360° walkthrough of level 2', 'Shoot and stitch a 360° walkthrough of the level 2 framing for the design team.', 'high', 'complex', 'week', 'pending', '+3 days'],
+            ['Review subcontractor media submissions', 'Check that all subcontractors uploaded their daily progress photos this week.', 'low', 'moderate', 'week', 'pending', '+5 days'],
+        ],
+        'franklin.strong@example.com' => [
+            ['Capture safety toolbox talk on video', 'Record the morning safety briefing and upload it for crew members who missed it.', 'high', 'simple', 'day', 'pending', '+0 days'],
+            ['Photograph completed electrical rough-in', 'Document the electrical rough-in on floors 1–3 before drywall closes the walls.', 'critical', 'moderate', 'day', 'in_progress', '+0 days'],
+            ['Compile incident-prevention photo report', 'Assemble a photo report of corrected hazards from this week for the safety officer.', 'medium', 'complex', 'week', 'pending', '+4 days'],
+            ['Tag and caption gallery uploads', 'Add captions and location tags to this week\'s uploaded media for searchability.', 'low', 'simple', 'week', 'pending', '+6 days'],
+        ],
+        'sophia.martinez@example.com' => [
+            ['Edit client update video', 'Trim and color-correct the client update video covering this week\'s milestones.', 'high', 'complex', 'day', 'in_progress', '+0 days'],
+            ['Upload material delivery photos', 'Photograph and upload the steel and glazing deliveries received this morning.', 'medium', 'simple', 'day', 'pending', '+0 days'],
+            ['Storyboard the monthly highlight film', 'Plan shots and structure for the monthly project highlight film.', 'medium', 'moderate', 'week', 'pending', '+5 days'],
+            ['Back up raw 4K footage to cloud', 'Transfer all raw 4K footage from the site cameras to cloud storage.', 'critical', 'moderate', 'week', 'pending', '+2 days'],
+        ],
+        'james.wilson@example.com' => [
+            ['Inspect and photograph scaffolding', 'Walk the east elevation scaffolding and upload photos flagging any defects.', 'critical', 'simple', 'day', 'pending', '+0 days'],
+            ['Record time-lapse of facade install', 'Set up and verify the time-lapse camera for today\'s facade panel installation.', 'medium', 'moderate', 'day', 'in_progress', '+0 days'],
+            ['Assemble weekly photo log for client', 'Collect the best site photos of the week into the shared client folder.', 'low', 'simple', 'week', 'pending', '+5 days'],
+            ['Calibrate site survey camera rig', 'Recalibrate the survey camera rig and document the new settings.', 'high', 'complex', 'week', 'pending', '+3 days'],
+        ],
+        'admin@example.com' => [
+            ['Review pending media approvals', 'Go through the queue of crew-submitted photos and videos awaiting approval.', 'high', 'moderate', 'day', 'in_progress', '+0 days'],
+            ['Verify storage quota across projects', 'Check that no active project has exceeded its media storage quota today.', 'medium', 'simple', 'day', 'pending', '+0 days'],
+            ['Audit department task assignments', 'Confirm every crew member has their tasks assigned correctly for the week.', 'critical', 'complex', 'week', 'pending', '+2 days'],
+            ['Publish weekly company media digest', 'Curate and publish the company-wide weekly digest of project media.', 'low', 'moderate', 'week', 'pending', '+6 days'],
+        ],
+    ];
+
+    $insertTask = $pdo->prepare(
+        'INSERT INTO tasks (user_id, title, description, urgency, complexity, scope, status, due_date)
+         VALUES (:uid, :title, :desc, :urgency, :complexity, :scope, :status, datetime("now", :due))'
+    );
+    $findUser = $pdo->prepare('SELECT id FROM users WHERE email = :email');
+    $countTasks = $pdo->prepare('SELECT COUNT(*) FROM tasks WHERE user_id = :uid');
+
+    $created = 0;
+    $skipped = 0;
+    foreach ($tasksByEmail as $email => $tasks) {
+        $findUser->execute([':email' => $email]);
+        $uid = $findUser->fetchColumn();
+        if (!$uid) {
+            echo "  Skipped tasks for {$email}: user not found.\n";
+            continue;
+        }
+
+        $countTasks->execute([':uid' => $uid]);
+        if ((int) $countTasks->fetchColumn() > 0) {
+            $skipped++;
+            continue;
+        }
+
+        foreach ($tasks as $t) {
+            $insertTask->execute([
+                ':uid'        => $uid,
+                ':title'      => $t[0],
+                ':desc'       => $t[1],
+                ':urgency'    => $t[2],
+                ':complexity' => $t[3],
+                ':scope'      => $t[4],
+                ':status'     => $t[5],
+                ':due'        => $t[6],
+            ]);
+            $created++;
+        }
+        echo "  Created 4 tasks for {$email}\n";
+    }
+
+    if ($created === 0 && $skipped > 0) {
+        echo "Tasks already exist for all demo accounts. Skipping task seed.\n";
+    } else {
+        echo "Task seeding complete: {$created} tasks created.\n";
+    }
+}

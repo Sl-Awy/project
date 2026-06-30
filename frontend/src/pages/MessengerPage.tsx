@@ -4,6 +4,7 @@ import SearchInput from "../components/SearchInput";
 import { useAuth } from "../context/AuthContext";
 import { getConversations, getMessages, sendMessage, type Conversation, type MessageRow } from "../api/messenger";
 import { searchUsers, followUser, unfollowUser, type SearchUser } from "../api/users";
+import { resolveMediaUrl } from "../utils/mediaUrl";
 
 function displayName(name: string | null, userId: number): string {
   if (name && name.trim()) return name.trim();
@@ -115,6 +116,7 @@ const MessengerPage = () => {
     }
   };
 
+  // Messenger: send a direct message to the selected peer
   const handleSend = async (e: FormEvent) => {
     e.preventDefault();
     if (!peerId || !draft.trim() || !user) return;
@@ -172,7 +174,9 @@ const MessengerPage = () => {
             <p className="text-gray-500 text-sm">No users found.</p>
           ) : (
             <ul className="space-y-2">
-              {searchResults.map((u) => (
+              {searchResults.map((u) => {
+                const peerAvatar = resolveMediaUrl(u.avatar_url);
+                return (
                 <li
                   key={u.id}
                   className="flex items-center justify-between gap-3 rounded-lg border border-gray-700 bg-gray-900/40 px-3 py-2"
@@ -185,9 +189,9 @@ const MessengerPage = () => {
                     }}
                     disabled={!u.is_following}
                   >
-                    {u.avatar_url ? (
+                    {peerAvatar ? (
                       <img
-                        src={u.avatar_url}
+                        src={peerAvatar}
                         alt=""
                         className="rounded-full w-10 h-10 object-cover shrink-0"
                       />
@@ -221,7 +225,8 @@ const MessengerPage = () => {
                     {u.is_following ? "Unfollow" : "Follow"}
                   </button>
                 </li>
-              ))}
+              );
+              })}
             </ul>
           )}
         </div>
@@ -238,7 +243,9 @@ const MessengerPage = () => {
             <p className="text-gray-500 text-sm p-3">Follow someone to start messaging.</p>
           ) : (
             <ul className="overflow-y-auto max-h-[360px]">
-              {conversations.map((c) => (
+              {conversations.map((c) => {
+                const convAvatar = resolveMediaUrl(c.avatar_url);
+                return (
                 <li key={c.id}>
                   <button
                     type="button"
@@ -247,8 +254,12 @@ const MessengerPage = () => {
                       peerId === c.id ? "bg-gray-800/70" : ""
                     }`}
                   >
-                    {c.avatar_url ? (
-                      <img src={c.avatar_url} alt="" className="rounded-full w-10 h-10 object-cover shrink-0" />
+                    {convAvatar ? (
+                      <img
+                        src={convAvatar}
+                        alt=""
+                        className="rounded-full w-10 h-10 object-cover shrink-0"
+                      />
                     ) : (
                       <div className="rounded-full bg-indigo-700 w-10 h-10 flex items-center justify-center text-white font-bold shrink-0">
                         {displayName(c.name, c.id).charAt(0).toUpperCase()}
@@ -265,7 +276,8 @@ const MessengerPage = () => {
                     )}
                   </button>
                 </li>
-              ))}
+              );
+              })}
             </ul>
           )}
         </div>

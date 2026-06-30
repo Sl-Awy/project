@@ -1,31 +1,28 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import * as authApi from "../api/auth";
-
-interface User {
-  id: number;
-  email: string;
-  name?: string | null;
-  avatar_url?: string | null;
-  role?: string;
-}
+import type { AuthUser } from "../api/auth";
 
 interface AuthContextType {
-  user: User | null;
+  user: AuthUser | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signup: (email: string, password: string, confirmPassword: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
+  /** Apply user object returned from profile APIs without an extra /me round-trip */
+  updateUser: (u: AuthUser) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem("token"));
   const [isLoading, setIsLoading] = useState(true);
 
+  // Load current user from API when a token exists (session restore)
   useEffect(() => {
     if (token) {
       authApi
@@ -47,6 +44,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     }
   }, [token]);
+
+  const refreshUser = async () => {
+    const res = await authApi.checkAuth();
+    if (res.success && res.data?.user) {
+      setUser(res.data.user);
+    }
+  };
+
+  const updateUser = (u: AuthUser) => {
+    setUser(u);
+  };
 
   const login = async (email: string, password: string) => {
     const res = await authApi.login(email, password);
@@ -88,6 +96,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         signup,
         logout: handleLogout,
+        refreshUser,
+        updateUser,
       }}
     >
       {children}

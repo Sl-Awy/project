@@ -2,9 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Global shell: full-page background and centering for the app layout */
+html {
+    background: #081b29;
+}
+
 body {
     display: flex;
     justify-content: center;
     align-items: center;
+    min-height: 100vh;
+    width: 100%;
+    /* Guard against accidental horizontal scroll on small screens */
+    overflow-x: hidden;
     background: #081b29;
 }

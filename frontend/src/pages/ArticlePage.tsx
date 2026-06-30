@@ -2,6 +2,7 @@ import { useEffect, useState, FormEvent } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { apiRequest } from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { resolveMediaUrl } from "../utils/mediaUrl";
 import "../CSS/PostCard.css";
 
 interface Article {
@@ -62,9 +63,10 @@ function formatDate(dateStr: string): string {
 function Avatar({ name, avatarUrl, size = "w-10 h-10" }: { name: string; avatarUrl?: string | null; size?: string }) {
   const initial = name.charAt(0).toUpperCase();
   const bgColor = getAvatarColor(name);
+  const src = resolveMediaUrl(avatarUrl ?? null);
 
-  if (avatarUrl) {
-    return <img src={avatarUrl} alt={name} className={`rounded-full ${size} object-cover`} />;
+  if (src) {
+    return <img src={src} alt={name} className={`rounded-full ${size} object-cover`} />;
   }
   return (
     <div className={`rounded-full ${bgColor} ${size} flex justify-center items-center text-white font-bold`}>
@@ -94,6 +96,7 @@ const ArticlePage = () => {
   const [deletingCommentId, setDeletingCommentId] = useState<number | null>(null);
 
   useEffect(() => {
+    // Article detail + comments thread
     const fetchArticle = async () => {
       const res = await apiRequest<Article>(`/api/articles/${id}`);
       if (res.success && res.data) {
@@ -121,6 +124,7 @@ const ArticlePage = () => {
     e.preventDefault();
     if (!commentText.trim()) return;
 
+    // Comments: add a comment on this article
     setCommentLoading(true);
     setCommentError(null);
 
@@ -142,6 +146,7 @@ const ArticlePage = () => {
     if (likeLoading) return;
     setLikeLoading(true);
 
+    // Likes: toggle like on this article
     const res = await apiRequest<{ liked: boolean; like_count: number }>(
       `/api/articles/${id}/like`,
       { method: "POST" }

@@ -1,18 +1,7 @@
 import { useState } from "react";
 import { apiRequest } from "../api/client";
+import type { Article } from "../types/article";
 import "../CSS/PostCard.css";
-
-interface Article {
-  id: number;
-  title: string;
-  body: string;
-  image_url: string | null;
-  created_at: string;
-  user_id: number;
-  name: string | null;
-  email: string;
-  avatar_url: string | null;
-}
 
 interface CreateArticleFormProps {
   onCreated: (article: Article) => void;
@@ -26,6 +15,7 @@ const CreateArticleForm = ({ onCreated }: CreateArticleFormProps) => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Publishing: create a new article via the API
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);

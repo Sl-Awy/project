@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiRequest } from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { resolveMediaUrl } from "../utils/mediaUrl";
 import "../CSS/PostCard.css";
 
 interface PostCardProps {
@@ -64,6 +65,7 @@ const PostCard = ({
   const initial = authorName.charAt(0).toUpperCase();
   const bgColor = getAvatarColor(authorName);
   const preview = body.length > PREVIEW_LENGTH ? body.slice(0, PREVIEW_LENGTH) + "..." : body;
+  const avatarSrc = resolveMediaUrl(avatarUrl ?? null);
 
   const canDelete = user && (user.id === authorId || user.role === "admin");
 
@@ -73,6 +75,7 @@ const PostCard = ({
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  // Post owner (or admin) may delete the article
   const handleDelete = async () => {
     setDeleteLoading(true);
     const res = await apiRequest(`/api/articles/${id}`, { method: "DELETE" });
@@ -87,6 +90,7 @@ const PostCard = ({
     setShowDeleteConfirm(false);
   };
 
+  // Likes: toggle like for this article
   const handleLike = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -109,9 +113,9 @@ const PostCard = ({
     <div className="form">
       <div className="options">
         <div className="flex h-16 gap-4 items-center">
-          {avatarUrl ? (
+          {avatarSrc ? (
             <img
-              src={avatarUrl}
+              src={avatarSrc}
               alt={authorName}
               className="rounded-full w-10 h-10 object-cover"
             />

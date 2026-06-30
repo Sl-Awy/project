@@ -45,7 +45,7 @@
     color: #fff;
 }
 
-.search, .persons, .message, .settings, .plus {
+.search, .persons, .message, .settings, .plus, .download {
     filter: invert(1)
     
 }
